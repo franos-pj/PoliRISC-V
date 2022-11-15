@@ -6,9 +6,13 @@ end entity;
 architecture arch of Shiftleft2_tb is
 
     component Shiftleft2 is
+        generic (
+            inputSize: natural := 64;
+            outputSize: natural := 64
+        );
         port(
-            i: in bit_vector(63 downto 0);
-            o: out bit_vector(63 downto 0)
+            i: in bit_vector(inputSize-1 downto 0);
+            o: out bit_vector(outputSize-1 downto 0)
         );
     end component Shiftleft2;
 
