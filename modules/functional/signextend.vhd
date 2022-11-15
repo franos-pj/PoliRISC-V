@@ -1,24 +1,27 @@
 entity signExtend is
+    generic (
+        inputSize: natural := 32;
+        outputSize: natural := 64
+    );
     port(
-        i: in  bit_vector(31 downto 0);
-        o: out bit_vector(63 downto 0)
+        i: in  bit_vector(inputSize-1 downto 0);
+        o: out bit_vector(outputSize-1 downto 0)
     );
 end signExtend;
 
 architecture combinational of signExtend is
-    signal dFormatToExtend: bit_vector(8 downto 0);
-    signal cbzToExtend:     bit_vector(18 downto 0);
-    signal bToExtend:       bit_vector(25 downto 0);
-begin
-    dFormatToExtend <= i(20 downto 12);
-    cbzToExtend <= i(23 downto 5);
-    bToExtend <= i(25 downto 0);
+    signal opcode: bit_vector(6 downto 0);
+    signal toExtend: bit_vector(11 downto 0);
 
-    o <=
-        (37 downto 0 => bToExtend(25)) & bToExtend
-            when i(31) = '0' else
-        (44 downto 0 => cbzToExtend(18)) & cbzToExtend
-            when i(30) = '0' else
-        (54 downto 0 => dFormatToExtend(8)) & dFormatToExtend;
+    constant LW_OPCODE: bit_vector(6 downto 0) := B"000_0011";
+    constant SW_OPCODE: bit_vector(6 downto 0) := B"010_0011";
+begin
+    opcode <= i(6 downto 0);
+    with opcode select toExtend <=
+        i(31 downto 20) when LW_OPCODE,
+        i(31 downto 25) & i(11 downto 7) when SW_OPCODE,
+        (others => '0') when others;
+
+    o <= ((outputSize - toExtend'length)-1 downto 0 => toExtend(toExtend'left)) & toExtend;
 
 end architecture combinational;
