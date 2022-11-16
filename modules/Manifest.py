@@ -4,3 +4,14 @@ files = [
     "polilegsc.vhd",
     "toplevel.vhd",
 ]
+
+modules = {
+    "local" : [
+        "alu",
+        "control",
+        "functional",
+        "memory",
+        "pipeline",
+        "register_file",
+    ],
+}
