@@ -3,6 +3,12 @@ use ieee.math_real.ceil;
 use ieee.math_real.log2;
 use ieee.numeric_bit.all;
 
+use work.parameters.NUMBER_OF_REGISTERS;
+use work.parameters.REGISTER_ADDRESS_WIDTH;
+use work.parameters.DATA_WORD_SIZE;
+use work.parameters.INSTRUCTION_WORD_SIZE;
+use work.pipeline.all;
+
 entity datapath is
     port(
         -- Common
@@ -16,7 +22,8 @@ entity datapath is
         aluSrc,
         regWrite: in bit;
         -- To Control Unit
-        opcode: out bit_vector(10 downto 0);
+        opcode: out bit_vector(6 downto 0);
+        funct3: out bit_vector(2 downto 0);
         zero: out bit;
         -- IM interface
         imAddr: out bit_vector(63 downto 0);
@@ -24,7 +31,16 @@ entity datapath is
         -- DM interface
         dmAddr,
         dmIn: out bit_vector(63 downto 0);
-        dmOut: in bit_vector(63 downto 0)
+        dmOut: in bit_vector(63 downto 0);
+
+        -- Pipeline control signals
+        --- Hazard detection unit
+        pcWrite: in bit;
+        ---- Data hazard
+        idexDisable: in bit;
+        ---- Control hazard
+        registersEqual: out bit;
+        ifidFlush: in bit
     );
 end entity datapath;
 
@@ -56,16 +72,24 @@ architecture arch of datapath is
     end component;
 
     component signExtend is
+        generic (
+            inputSize: natural := 32;
+            outputSize: natural := 64
+        );
         port(
-            i: in  bit_vector(31 downto 0); 
-            o: out bit_vector(63 downto 0)
+            i: in  bit_vector(inputSize-1 downto 0);
+            o: out bit_vector(outputSize-1 downto 0)
         );
     end component;
 
     component Shiftleft2 is
+        generic (
+            inputSize: natural := 64;
+            outputSize: natural := 64
+        );
         port(
-            i: in bit_vector(63 downto 0);
-            o: out bit_vector(63 downto 0)
+            i: in bit_vector(inputSize-1 downto 0);
+            o: out bit_vector(outputSize-1 downto 0)
         );
     end component Shiftleft2;
 
@@ -80,12 +104,11 @@ architecture arch of datapath is
         );
     end component;
 
-    constant NUMBER_OF_REGISTERS: natural := 32;
-    constant REGISTER_ADDR_SIZE: natural := 5;
-    constant WORD_SIZE: natural := 64;
-    constant INSTRUCTION_SIZE: natural := 32;
+    constant REGISTER_ADDR_SIZE: natural := REGISTER_ADDRESS_WIDTH;
+    constant WORD_SIZE: natural := DATA_WORD_SIZE;
+    constant INSTRUCTION_SIZE: natural := INSTRUCTION_WORD_SIZE;
 
-    signal rr1, rr2, wr: bit_vector(REGISTER_ADDR_SIZE-1 downto 0);
+    signal rr1, rr2, rd, wr: bit_vector(REGISTER_ADDR_SIZE-1 downto 0);
     signal q1, q2, d: bit_vector(WORD_SIZE-1 downto 0);
 
     signal dataAluA, dataAluB, dataAluResult: bit_vector(WORD_SIZE-1 downto 0);
@@ -94,28 +117,105 @@ architecture arch of datapath is
     signal signExtendOut: bit_vector(WORD_SIZE-1 downto 0);
 
     signal pcPlusFour: bit_vector(WORD_SIZE-1 downto 0);
-    signal pfZero, pfOverflow, pfCarryOut: bit;
 
     signal shiftOut: bit_vector(WORD_SIZE-1 downto 0);
 
     signal pcPlusShift: bit_vector(WORD_SIZE-1 downto 0);
-    signal psZero, psOverflow, psCarryOut: bit;
 
     signal pcIn, pcOut: bit_vector(WORD_SIZE-1 downto 0);
 
+
+    component pipeline_reg is
+        generic(
+            wordSize: natural := 64
+        );
+        port(
+            clock, reset: in bit;
+            dataIn: in bit_vector(wordSize-1 downto 0);
+            dataOut: out bit_vector(wordSize-1 downto 0)
+        );
+    end component;
+
+    constant NOP: bit_vector(31 downto 0) := x"00000013";
+
+    signal aluZero: bit;
+
+    signal ifidIn, ifidOut: ifid_t;
+    signal idexOut: idex_t;
+    signal exmemOut: exmem_t;
+    signal memwbOut: memwb_t;
+
+    signal idexInBv, idexOutBv: bit_vector(
+        (
+            WB_CONTROL_WIDTH
+            + M_CONTROL_WIDTH
+            + EX_CONTROL_WIDTH
+            + 3*DATA_WORD_SIZE -- q1, q2, immExtended
+            + REGISTER_ADDRESS_WIDTH -- rd
+        )-1
+        downto 0
+    );
+    signal exmemInBv, exmemOutBv: bit_vector(
+        (
+            WB_CONTROL_WIDTH
+            + M_CONTROL_WIDTH
+            + 1 -- aluZero
+            + 2*DATA_WORD_SIZE -- aluResult, q2
+            + REGISTER_ADDRESS_WIDTH -- rd
+        )-1
+        downto 0
+    );
+    signal memwbInBv, memwbOutBv: bit_vector(
+        (
+            WB_CONTROL_WIDTH
+            + 2*DATA_WORD_SIZE -- aluResult, dmOut
+            + REGISTER_ADDRESS_WIDTH -- rd
+        )-1
+        downto 0
+    );
+
 begin
 
-    opcode <= imOut(INSTRUCTION_SIZE-1 downto INSTRUCTION_SIZE-11);
+    pcIn <=
+        pcPlusShift when pcSrc = '1' else
+        pcPlusFour;
+
+    pc: reg
+        generic map(WORD_SIZE)
+        port map(
+            clock, reset, '1', pcWrite,
+            pcIn, pcOut
+        );
+
+    fourAdder: alu
+        generic map(WORD_SIZE)
+        port map(
+            pcOut, (2 => '1', others => '0'),
+            pcPlusFour,
+            "0010",
+            open, open, open
+        );
+
+    imAddr <= pcOut;
 
 
-    rr1 <= imOut(9 downto 5);
-    rr2 <= 
-        imOut(4 downto 0) when reg2loc = '1' else
-        imOut(20 downto 16);
-    wr <= imOut(4 downto 0);
-    d <= 
-        dmOut when memToReg = '1' else
-        dataAluResult;
+    -- TODO Consider using others => '0' instead of NOP
+    ifidIn <= imOut when ifidFlush = '1' else NOP;
+    ifidReg: pipeline_reg
+        generic map(INSTRUCTION_SIZE)
+        port map(
+            clock, reset,
+            ifidIn, ifidOut
+        );
+
+
+    opcode <= ifidOut(6 downto 0);
+    rd <= ifidOut(11 downto 7);
+    funct3 <= ifidOut(14 downto 12);
+    rr1 <= ifidOut(19 downto 15);
+    rr2 <= ifidOut(24 downto 20);
+    -- TODO Decode func7 (31 downto 25)
+
 
     registers: regfile
         generic map(NUMBER_OF_REGISTERS, WORD_SIZE)
@@ -127,43 +227,27 @@ begin
         );
 
 
+    -- TODO Add MUXes to comparator input
+    -- for data forwarding
+    comparator: alu
+        generic map(WORD_SIZE)
+        port map(
+            q1, q2, open,
+            "0110",
+            registersEqual, open, open
+        );
+
+
     extend: signExtend
         port map(
-            imOut(31 downto 0),
+            ifidOut,
             signExtendOut
         );
 
 
-    dataAluA <= q1;
-    dataAluB <=
-        signExtendOut when aluSrc = '1' else
-        q2; 
-
-    dataAlu: alu
-        generic map(WORD_SIZE)
-        port map(
-            dataAluA, dataAluB,
-            dataAluResult,
-            aluCtrl,
-            zero, dataOverflow, dataCarryOut
-        );
-
- 
-    dmAddr <= dataAluResult;
-    dmIn <= q2;
-
-    fourAdder: alu
-        generic map(WORD_SIZE)
-        port map(
-            pcOut, (2 => '1', others => '0'),
-            pcPlusFour,
-            "0010",
-            pfZero, pfOverflow, pfCarryOut
-        );    
-
-
     shift2: Shiftleft2
         port map(signExtendOut, shiftOut);
+
 
     shiftAdder: alu
         generic map(WORD_SIZE)
@@ -171,21 +255,102 @@ begin
             pcOut, shiftOut,
             pcPlusShift,
             "0010",
-            psZero, psOverflow, psCarryOut
+            open, open, open
         );
-        
 
-    pcIn <=
-        pcPlusShift when pcSrc = '1' else
-        pcPlusFour;
 
-    pc: reg
+    idexInBv <=
+        "00" -- WB
+        & "000" -- M
+        & "000" -- EX
+        & q1
+        & q2
+        & signExtendOut
+        & wr;
+    idexOutBv <=
+        idexOut.wb
+        & idexOut.m
+        & idexOut.ex
+        & idexOut.q1
+        & idexOut.q2
+        & idexOut.immExtended
+        & idexOut.rd;
+
+    idexReg: pipeline_reg
+        generic map(idexInBv'length)
+        port map(
+            clock, reset,
+            idexInBv,
+            idexOutBv
+        );
+
+
+    dataAluA <= idexOut.q1;
+    dataAluB <=
+        idexOut.immExtended when aluSrc = '1' else
+        idexOut.q2;
+
+    dataAlu: alu
         generic map(WORD_SIZE)
         port map(
-            clock, reset, '1', '1',
-            pcIn, pcOut
+            dataAluA, dataAluB,
+            dataAluResult,
+            aluCtrl,
+            aluZero, dataOverflow, dataCarryOut
+        );
+    zero <= aluZero;
+
+
+    exmemInBv <=
+        idexOut.wb
+        & idexOut.m
+        & aluZero
+        & dataAluResult
+        & idexOut.q2
+        & idexOut.rd;
+    exmemOutBv <=
+        exmemOut.wb
+        & exmemOut.m
+        & exmemOut.aluZero
+        & exmemOut.aluResult
+        & exmemOut.q2
+        & exmemOut.rd;
+
+    exmemReg: pipeline_reg
+        generic map(exmemInBv'length)
+        port map(
+            clock, reset,
+            exmemInBv,
+            exmemOutBv
         );
 
-    imAddr <= pcOut;
+
+    dmAddr <= exmemOut.aluResult;
+    dmIn <= exmemOut.q2;
+
+
+    memwbInBv <=
+        exmemOut.wb
+        & dmOut
+        & exmemOut.aluResult
+        & exmemOut.rd;
+    memwbOutBv <=
+        memwbOut.wb
+        & memwbOut.dmOut
+        & memwbOut.aluResult
+        & memwbOut.rd;
+
+    memwbReg: pipeline_reg
+        generic map(memwbInBv'length)
+        port map(
+            clock, reset,
+            memwbInBv,
+            memwbOutBv
+        );
+
+
+    d <= dmOut when memToReg = '1' else dataAluResult;
+
+    wr <= memwbOut.rd;
 
 end architecture arch;
