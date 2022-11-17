@@ -1,3 +1,7 @@
+library ieee;
+use ieee.numeric_std.std_match;
+use ieee.std_logic_1164.all;
+
 use work.utils.all;
 
 entity alucontrol_tb is
@@ -7,43 +11,53 @@ architecture arch of alucontrol_tb is
 
     component alucontrol is
         port(
-            aluop: in bit_vector(1 downto 0);
-            opcode: in bit_vector(10 downto 0);
-            aluCtrl: out bit_vector(3 downto 0)
+            funct3   : in  bit_vector (2 downto 0);
+            funct7_5 : in  bit;
+            aluOp    : in  bit_vector (1 downto 0);
+            aluCtrl  : out bit_vector (3 downto 0)
         );
     end component;
 
     type test_case_type is record
-        aluop: bit_vector(1 downto 0);
-        opcode: bit_vector(10 downto 0);
-        response: bit_vector(3 downto 0);
+        funct3   : std_logic_vector (2 downto 0);
+        funct7_5 : std_logic;
+        aluOp    : bit_vector (1 downto 0);
+        response : bit_vector (3 downto 0);
     end record;
     type test_case_array is array(1 to 7) of test_case_type;
     constant TEST_CASES: test_case_array := (
-        ("00", "00000000000", "0010"),
-        ("00", "00000000000", "0010"),
-        ("01", "00000000000", "0111"),
-        ("10", "10001011000", "0010"),
-        ("10", "11001011000", "0110"),
-        ("10", "10001010000", "0000"),
-        ("10", "10101010000", "0001")
+        ("---", '-', "00", "0010"), -- lw
+        ("---", '-', "00", "0010"), -- sw
+        ("---", '-', "01", "0110"), -- beq
+        ("000", '0', "10", "0010"), -- add (R-type)
+        ("000", '1', "10", "0110"), -- sub (R-type)
+        ("111", '0', "10", "0000"), -- and (R-type)
+        ("110", '0', "10", "0001")  -- or  (R-type)
     );
 
-    signal aluop: bit_vector(1 downto 0);
-    signal opcode: bit_vector(10 downto 0);
-    signal response: bit_vector(3 downto 0);
+    signal funct3   : bit_vector (2 downto 0);
+    signal funct7_5 : bit;
+    signal aluOp    : bit_vector (1 downto 0);
+    signal response : bit_vector (3 downto 0);
 
 begin
 
-	dut: alucontrol port map(aluop, opcode, response);
+	dut: alucontrol 
+    port map(
+        funct3, 
+        funct7_5,
+        aluOp, 
+        response
+    );
 
 	tb: process
 	begin
 		report "BOT";
 
         for index in TEST_CASES'range loop
-            aluop <= TEST_CASES(index).aluop;
-            opcode <= TEST_CASES(index).opcode;
+            funct3   <= to_bitvector(TEST_CASES(index).funct3);
+            funct7_5 <= to_bit(TEST_CASES(index).funct7_5);
+            aluOp    <= TEST_CASES(index).aluOp;
             wait for 1 ps;
             assert_equals(TEST_CASES(index).response, response, index);
         end loop;
