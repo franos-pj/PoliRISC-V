@@ -1,7 +1,7 @@
 library ieee;
 use ieee.numeric_bit.all;
 
-entity forwardingunit is
+entity forwarding is
     port(
         exmem_regWrite, memwb_regWrite : in  bit;
         idex_Rs1, idex_Rs2             : in  bit_vector (63 downto 0);
@@ -10,7 +10,7 @@ entity forwardingunit is
     );
 end entity;
 
-architecture behavioural of forwardingunit is
+architecture behavioural of forwarding is
 begin
 
     -- process for forwardA
@@ -20,9 +20,9 @@ begin
         if ((exmem_regWrite = '1')
             and (to_integer(unsigned(exmem_Rd)) /= 0)
             and (exmem_Rd = idex_Rs1)) then
-            
+
             forwardA <= "10";
-        
+
         elsif ((memwb_regWrite = '1')
                and (to_integer(unsigned(memwb_Rd)) /= 0)
                and (memwb_Rd = idex_Rs1)) then
@@ -42,9 +42,9 @@ begin
         if ((exmem_regWrite = '1')
             and (to_integer(unsigned(exmem_Rd)) /= 0)
             and (exmem_Rd = idex_Rs2)) then
-            
+
             forwardB <= "10";
-        
+
         elsif ((memwb_regWrite = '1')
                and (to_integer(unsigned(memwb_Rd)) /= 0)
                and (memwb_Rd = idex_Rs2)) then
