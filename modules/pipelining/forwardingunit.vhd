@@ -4,8 +4,8 @@ use ieee.numeric_bit.all;
 entity forwardingunit is
     port(
         exmem_regWrite, memwb_regWrite : in  bit;
-        idex_Rs1, idex_Rs2             : in  bit_vector (4 downto 0);
-        exmem_Rd, memwb_Rd             : in  bit_vector (4 downto 0);
+        idex_Rs1, idex_Rs2             : in  bit_vector (63 downto 0);
+        exmem_Rd, memwb_Rd             : in  bit_vector (63 downto 0);
         forwardA, forwardB             : out bit_vector (1 downto 0)
     );
 end entity;
