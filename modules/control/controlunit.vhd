@@ -1,41 +1,32 @@
 entity controlunit is
     port(
-        -- To Datapath
-        reg2loc,
-        uncondBranch,
-        branch,
-        memRead,
-        memToReg: out bit;
-        aluOp: out bit_vector(1 downto 0);
-        memWrite,
-        aluSrc,
-        regWrite: out bit;
-        -- From Datapath
-        opcode: in bit_vector(10 downto 0)
+        --- From Datapath ---
+        opcode   : in  bit_vector (6 downto 0);
+        --- To   Datapath ---
+        -- ID stage
+        regWrite : out bit;
+        -- EX stage
+        aluSrc   : out bit;
+        aluOp    : out bit_vector (1 downto 0);
+        -- MEM stage
+        branch   : out bit;
+        memRead  : out bit;
+        memWrite : out bit;
+        -- WB stage
+        memToReg : out bit
     );
 end entity;
 
-architecture arch of controlunit is
+architecture arch_controlunit of controlunit is
 
 begin
 
-    reg2loc <= opcode(7);
-    memToReg <= opcode(1);
-    branch <= opcode(5);
-    aluOp <= opcode(4) & opcode(5);
-    uncondBranch <= not opcode(10);
+    regWrite <= opcode(4) or not opcode(5);
+    aluSrc   <= (not opcode(6)) and (not opcode(4));
+    aluOp    <= opcode(4) & opcode(6);
+    branch   <= opcode(6);
+    memRead  <= not opcode(5);
+    memWrite <= (not opcode(6)) and opcode(5) and (not opcode(4));
+    memToReg <= (not opcode(5)) and (not opcode(4));
 
-    with opcode(7) select aluSrc <=
-        opcode(9)   when '1',
-        '0'         when others;
-
-    with opcode(5) select memRead <=
-        opcode(1)   when '0',
-        '0'         when others;
-
-    regWrite <= (opcode(10) and opcode(9) and opcode(1))
-        or (not opcode(7));
-    memWrite <= opcode(10) and opcode(9) and (not opcode(1))
-        and opcode(7);
-
-end architecture arch;
+end architecture;
