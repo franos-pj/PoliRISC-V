@@ -3,8 +3,6 @@ entity controlunit is
         --- From Datapath ---
         opcode   : in  bit_vector (6 downto 0);
         --- To   Datapath ---
-        -- ID stage
-        regWrite : out bit;
         -- EX stage
         aluSrc   : out bit;
         aluOp    : out bit_vector (1 downto 0);
@@ -13,7 +11,8 @@ entity controlunit is
         memRead  : out bit;
         memWrite : out bit;
         -- WB stage
-        memToReg : out bit
+        memToReg : out bit;
+        regWrite : out bit
     );
 end entity;
 

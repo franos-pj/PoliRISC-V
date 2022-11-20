@@ -14,8 +14,6 @@ architecture arch of controlunit_tb is
             --- From Datapath ---
             opcode   : in  bit_vector (6 downto 0);
             --- To   Datapath ---
-            -- ID stage
-            regWrite : out bit;
             -- EX stage
             aluSrc   : out bit;
             aluOp    : out bit_vector (1 downto 0);
@@ -24,7 +22,8 @@ architecture arch of controlunit_tb is
             memRead  : out bit;
             memWrite : out bit;
             -- WB stage
-            memToReg : out bit
+            memToReg : out bit;
+            regWrite : out bit
         );
     end component;
 
@@ -55,13 +54,13 @@ begin
 
 	dut: controlunit port map(
         opcode,
-        controlSignals(7),          -- regWrite
         controlSignals(6),          -- aluSrc
         controlSignals(5 downto 4), -- aluOp
         controlSignals(3),          -- branch
         controlSignals(2),          -- memRead
         controlSignals(1),          -- memWrite
-        controlSignals(0)           -- memToReg
+        controlSignals(0),          -- memToReg
+        controlSignals(7)           -- regWrite
     );
 
 	tb: process
