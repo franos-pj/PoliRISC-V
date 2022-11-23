@@ -1,7 +1,3 @@
-library ieee;
-use ieee.bit_1164.all;
-use ieee.numeric_std.all;
-
 entity data_hazard is
     port(
         -- Identifica load
