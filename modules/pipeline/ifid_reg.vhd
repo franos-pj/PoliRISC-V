@@ -1,4 +1,4 @@
-entity pipeline_reg is
+entity ifid_reg is
     generic(
         wordSize: natural := 64
     );
@@ -9,7 +9,7 @@ entity pipeline_reg is
     );
 end entity;
 
-architecture arch of pipeline_reg is
+architecture arch of ifid_reg is
     component reg is
         generic(
             wordSize: natural := 64

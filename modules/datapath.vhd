@@ -144,7 +144,7 @@ architecture arch of datapath is
     signal pcIn, pcOut: bit_vector(WORD_SIZE-1 downto 0);
 
 
-    component pipeline_reg is
+    component ifid_reg is
         generic(
             wordSize: natural := 64
         );
@@ -152,6 +152,88 @@ architecture arch of datapath is
             clock, reset: in bit;
             dataIn: in bit_vector(wordSize-1 downto 0);
             dataOut: out bit_vector(wordSize-1 downto 0)
+        );
+    end component;
+
+    component idex_reg is
+        port(
+            clock, reset,
+            -- Input
+            in_memToReg,
+            in_regWrite,
+            in_branch,
+            in_memRead,
+            in_memWrite: in bit;
+            in_funct3: in bit_vector(2 downto 0);
+            in_funct7_5,
+            in_aluSrc: in bit;
+            in_aluOpIn: in bit_vector(1 downto 0);
+            in_q1,
+            in_q2,
+            in_signExtendOut: in bit_vector(DATA_WORD_SIZE-1 downto 0);
+            in_rs1,
+            in_rs2,
+            in_rd: in bit_vector(REGISTER_ADDRESS_WIDTH-1 downto 0);
+            -- Output
+            out_memToReg,
+            out_regWrite,
+            out_branch,
+            out_memRead,
+            out_memWrite: out bit;
+            out_funct3: out bit_vector(2 downto 0);
+            out_funct7_5,
+            out_aluSrc: out bit;
+            out_aluOpIn: out bit_vector(1 downto 0);
+            out_q1,
+            out_q2,
+            out_signExtendOut: out bit_vector(DATA_WORD_SIZE-1 downto 0);
+            out_rs1,
+            out_rs2,
+            out_rd: out bit_vector(REGISTER_ADDRESS_WIDTH-1 downto 0)
+        );
+    end component;
+
+    component exmem_reg is
+        port(
+            clock, reset: in bit;
+            -- Input
+            in_memToReg,
+            in_regWrite,
+            in_branch,
+            in_memRead,
+            in_memWrite,
+            in_aluZero: in bit;
+            in_result,
+            in_q2: in bit_vector(DATA_WORD_SIZE-1 downto 0);
+            in_rd: in bit_vector(REGISTER_ADDRESS_WIDTH-1 downto 0);
+            -- Output
+            out_memToReg,
+            out_regWrite,
+            out_branch,
+            out_memRead,
+            out_memWrite,
+            out_aluZero: out bit;
+            out_result,
+            out_q2: out bit_vector(DATA_WORD_SIZE-1 downto 0);
+            out_rd: out bit_vector(REGISTER_ADDRESS_WIDTH-1 downto 0)
+        );
+    end component;
+
+    component memwb_reg is
+        port(
+            clock, reset,
+            -- Input
+            in_memToReg,
+            in_regWrite: in bit;
+            in_dmOut,
+            in_aluResult: in bit_vector(DATA_WORD_SIZE-1 downto 0);
+            in_rd: in bit_vector(REGISTER_ADDRESS_WIDTH-1 downto 0);
+            -- Output
+            out_memToReg,
+            out_regWrite: out bit;
+            out_dmOut,
+            out_aluResult: out bit_vector(DATA_WORD_SIZE-1 downto 0);
+            out_rd: out bit_vector(REGISTER_ADDRESS_WIDTH-1 downto 0)
         );
     end component;
 
@@ -180,35 +262,6 @@ architecture arch of datapath is
     signal idexOut: idex_t;
     signal exmemOut: exmem_t;
     signal memwbOut: memwb_t;
-
-    signal idexInBv, idexOutBv: bit_vector(
-        (
-            WB_CONTROL_WIDTH
-            + M_CONTROL_WIDTH
-            + EX_CONTROL_WIDTH
-            + 3*DATA_WORD_SIZE -- q1, q2, immExtended
-            + 3*REGISTER_ADDRESS_WIDTH -- rs1, rs2, rd
-        )-1
-        downto 0
-    );
-    signal exmemInBv, exmemOutBv: bit_vector(
-        (
-            WB_CONTROL_WIDTH
-            + M_CONTROL_WIDTH
-            + 1 -- aluZero
-            + 2*DATA_WORD_SIZE -- aluResult, q2
-            + REGISTER_ADDRESS_WIDTH -- rd
-        )-1
-        downto 0
-    );
-    signal memwbInBv, memwbOutBv: bit_vector(
-        (
-            WB_CONTROL_WIDTH
-            + 2*DATA_WORD_SIZE -- aluResult, dmOut
-            + REGISTER_ADDRESS_WIDTH -- rd
-        )-1
-        downto 0
-    );
 
 begin
 
@@ -246,7 +299,7 @@ begin
     if_id_register_rs2 <= rs2;
 
 
-    ifidReg: pipeline_reg
+    ifidReg: ifid_reg
         generic map(INSTRUCTION_SIZE)
         port map(
             clock, reset,
@@ -266,7 +319,7 @@ begin
         generic map(NUMBER_OF_REGISTERS, WORD_SIZE)
         port map(
             clock, reset, regWrite,
-            rs1, rs2, rd,
+            rs1, rs2, memwbOut.rd,
             d,
             q1, q2
         );
@@ -304,50 +357,46 @@ begin
     idexIn_aluSrc   <= '0'   when pass_bubble = '1' or idexFlush = '1' else aluSrc;
     idexIn_aluOpIn  <= "00"  when pass_bubble = '1' or idexFlush = '1' else aluOpIn;
 
-
-    idexInBv <=
-        idexIn_memToReg
-        & idexIn_regWrite
-        & idexIn_branch
-        & idexIn_memRead
-        & idexIn_memWrite
-        & idexIn_funct3
-        & idexIn_funct7_5
-        & idexIn_aluSrc
-        & idexIn_aluOpIn
-        & q1
-        & q2
-        & signExtendOut
-        & rs1
-        & rs2
-        & rd;
-    idexOutBv <=
+    idex: idex_reg port map (
+        clock, reset,
+        -- INPUT
+        idexIn_memToReg,
+        idexIn_regWrite,
+        idexIn_branch,
+        idexIn_memRead,
+        idexIn_memWrite,
+        idexIn_funct3,
+        idexIn_funct7_5,
+        idexIn_aluSrc,
+        idexIn_aluOpIn,
+        q1,
+        q2,
+        signExtendOut,
+        rs1,
+        rs2,
+        rd,
+        -- OUTPUT
         -- WB --
-        idexOut.memToReg
-        & idexOut.regWrite
+        idexOut.memToReg,
+        idexOut.regWrite,
         ----
         -- MEM --
-        & idexOut.branch
-        & idexOut.memRead
-        & idexOut.memWrite
+        idexOut.branch,
+        idexOut.memRead,
+        idexOut.memWrite,
         ----
-        & idexOut.funct3
-        & idexOut.funct7_5
-        & idexOut.aluSrc
-        & idexOut.aluOp
-        & idexOut.q1
-        & idexOut.q2
-        & idexOut.rs1
-        & idexOut.rs2
-        & idexOut.rd;
+        idexOut.funct3,
+        idexOut.funct7_5,
+        idexOut.aluSrc,
+        idexOut.aluOp,
+        idexOut.q1,
+        idexOut.q2,
+        idexOut.immExtended,
+        idexOut.rs1,
+        idexOut.rs2,
+        idexOut.rd
 
-    idexReg: pipeline_reg
-        generic map(idexInBv'length)
-        port map(
-            clock, reset,
-            idexInBv,
-            idexOutBv
-        );
+    );
 
 
     aluOpOut <= idexOut.aluOp;
@@ -387,42 +436,37 @@ begin
     hazardZero <= exmemOut.aluZero;
 
 
-    exmemInBv <=
+    exmem: exmem_reg port map (
+        clock, reset,
+        -- INPUT
         -- WB --
-        idexOut.memToReg
-        & idexOut.regWrite
+        idexOut.memToReg,
+        idexOut.regWrite,
         ----
         -- MEM --
-        & idexOut.branch
-        & idexOut.memRead
-        & idexOut.memWrite
+        idexOut.branch,
+        idexOut.memRead,
+        idexOut.memWrite,
         ----
-        & aluZero
-        & dataAluResult
-        & idexOut.q2
-        & idexOut.rd;
-    exmemOutBv <=
+        aluZero,
+        dataAluResult,
+        idexOut.q2,
+        idexOut.rd,
+        -- OUTPUT
         -- WB --
-        exmemOut.memToReg
-        & exmemOut.regWrite
+        exmemOut.memToReg,
+        exmemOut.regWrite,
         ----
         -- MEM --
-        & exmemOut.branch
-        & exmemOut.memRead
-        & exmemOut.memWrite
+        exmemOut.branch,
+        exmemOut.memRead,
+        exmemOut.memWrite,
         ----
-        & exmemOut.aluZero
-        & exmemOut.aluResult
-        & exmemOut.q2
-        & exmemOut.rd;
-
-    exmemReg: pipeline_reg
-        generic map(exmemInBv'length)
-        port map(
-            clock, reset,
-            exmemInBv,
-            exmemOutBv
-        );
+        exmemOut.aluZero,
+        exmemOut.aluResult,
+        exmemOut.q2,
+        exmemOut.rd
+    );
 
 
     dmAddr <= exmemOut.aluResult;
@@ -430,34 +474,26 @@ begin
     pcSrc <= exmemOut.aluZero and exmemOut.branch;
 
 
-    memwbInBv <=
+    memwb: memwb_reg port map (
+        clock, reset,
+        -- INPUT
         -- WB --
-        exmemOut.memToReg
-        & exmemOut.regWrite
+        exmemOut.memToReg,
+        exmemOut.regWrite,
         ----
-        & dmOut
-        & exmemOut.aluResult
-        & exmemOut.rd;
-    memwbOutBv <=
+        dmOut,
+        exmemOut.aluResult,
+        exmemOut.rd,
+        -- OUTPUT
         -- WB --
-        memwbOut.memToReg
-        & memwbOut.regWrite
+        memwbOut.memToReg,
+        memwbOut.regWrite,
         ----
-        & memwbOut.dmOut
-        & memwbOut.aluResult
-        & memwbOut.rd;
-
-    memwbReg: pipeline_reg
-        generic map(memwbInBv'length)
-        port map(
-            clock, reset,
-            memwbInBv,
-            memwbOutBv
-        );
-
+        memwbOut.dmOut,
+        memwbOut.aluResult,
+        memwbOut.rd
+    );
 
     d <= dmOut when memToReg = '1' else dataAluResult;
-
-    rd <= memwbOut.rd;
 
 end architecture arch;
