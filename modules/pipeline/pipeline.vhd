@@ -50,8 +50,8 @@ package pipeline is
         memToReg,
         regWrite: bit;
         ----
-        dmOut: bit_vector(DATA_WORD_SIZE-1 downto 0);
-        aluResult,
+        dmOut,
+        aluResult: bit_vector(DATA_WORD_SIZE-1 downto 0);
         rd: bit_vector(REGISTER_ADDRESS_WIDTH-1 downto 0);
     end record;
 end package pipeline;
