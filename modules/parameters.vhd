@@ -8,8 +8,7 @@ package parameters is
     constant INSTRUCTION_WORD_SIZE: natural := 32; -- bits
     constant MEMORY_WORD_SIZE: natural := 8; -- bits
     constant NUMBER_OF_REGISTERS: natural := 32;
-    constant REGISTER_ADDRESS_WIDTH: natural :=
-        natural(ceil(log2(real(NUMBER_OF_REGISTERS))));
+    constant REGISTER_ADDRESS_WIDTH: natural := 5;
 
     constant DAT_BASE_PATH: string := "../software/";
     constant FOLDER: string := "fibonacci/";
