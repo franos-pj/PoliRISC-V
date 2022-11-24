@@ -20,9 +20,9 @@ architecture arch of data_hazard is
     signal rs1_eq_rd: bit;
     signal rs2_eq_rd: bit;
 begin
-    rs1_eq_rd <= '1' when (if_id_register_rs1 = id_ex_register_rd) else '0';
-    rs2_eq_rd <= '1' when (if_id_register_rs2 = id_ex_register_rd) else '0';
-    stall <= (id_ex_memread and(rs1_eq_rd or rs2_eq_rd));
+    rs1_eq_rd <= '1' when (if_id_register_rs1 = id_ex_register_rd) and (id_ex_register_rd /= "00000") else '0';
+    rs2_eq_rd <= '1' when (if_id_register_rs2 = id_ex_register_rd) and (id_ex_register_rd /= "00000") else '0';
+    stall <= id_ex_memread and (rs1_eq_rd or rs2_eq_rd);
 
     pc_write <= not(stall);
     if_id_write <= not(stall);
