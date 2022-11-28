@@ -54,8 +54,8 @@ entity datapath is
         ---- Control hazard
         hazardBranch: out bit;
         hazardZero: out bit;
-        ifidFlush: in bit;
         idexFlush: in bit;
+        exmemFlush: in bit;
         --- Forwarding
         exmem_regWrite, memwb_regWrite: out  bit;
         idex_Rs1, idex_Rs2: out  bit_vector (4 downto 0);
@@ -245,8 +245,6 @@ architecture arch of datapath is
         );
     end component;
 
-    constant NOP: bit_vector(31 downto 0) := x"00000013";
-
     signal aluZero: bit;
 
     signal ifidIn, ifidOut: ifid_t;
@@ -266,6 +264,13 @@ architecture arch of datapath is
         idexIn_aluSrc: bit;
     signal idexIn_funct3: bit_vector(2 downto 0);
     signal idexIn_aluOpIn: bit_vector(1 downto 0);
+
+    signal
+        exmemIn_memToReg,
+        exmemIn_regWrite,
+        exmemIn_branch,
+        exmemIn_memRead,
+        exmemIn_memWrite: bit;
 
     signal idexOut: idex_t;
     signal exmemOut: exmem_t;
@@ -300,8 +305,6 @@ begin
 
     imAddr <= pcOut;
 
-
-    ifidIn <= imOut when ifidFlush = '1' else NOP;
 
     -- To Hazard Detection unit
     id_ex_memread <= idexOut.memRead;
@@ -452,17 +455,23 @@ begin
     hazardZero <= exmemOut.aluZero;
 
 
+    exmemIn_memToReg    <= '0' when exmemFlush = '1' else idexOut.memToReg;
+    exmemIn_regWrite    <= '0' when exmemFlush = '1' else idexOut.regWrite;
+    exmemIn_branch      <= '0' when exmemFlush = '1' else idexOut.branch;
+    exmemIn_memRead     <= '0' when exmemFlush = '1' else idexOut.memRead;
+    exmemIn_memWrite    <= '0' when exmemFlush = '1' else idexOut.memWrite;
+
     exmem: exmem_reg port map (
         clock, reset,
         -- INPUT
         -- WB --
-        idexOut.memToReg,
-        idexOut.regWrite,
+        exmemIn_memToReg,
+        exmemIn_regWrite,
         ----
         -- MEM --
-        idexOut.branch,
-        idexOut.memRead,
-        idexOut.memWrite,
+        exmemIn_branch,
+        exmemIn_memRead,
+        exmemIn_memWrite,
         ----
         aluZero,
         dataAluResult,

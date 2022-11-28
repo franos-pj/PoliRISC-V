@@ -71,8 +71,8 @@ architecture arch of polilegsc is
         port (
             branch: in bit;
             zero: in bit;
-            ifidFlush: out bit;
-            idexFlush: out bit
+            idexFlush: out bit;
+            exmemFlush: out bit
         );
     end component;
 
@@ -121,8 +121,8 @@ architecture arch of polilegsc is
             ---- Control hazard
             hazardBranch: out bit;
             hazardZero: out bit;
-            ifidFlush: in bit;
             idexFlush: in bit;
+            exmemFlush: in bit;
             --- Forwarding
             exmem_regWrite, memwb_regWrite: out  bit;
             idex_Rs1, idex_Rs2: out  bit_vector (4 downto 0);
@@ -174,8 +174,8 @@ architecture arch of polilegsc is
     -- control_hazard
     signal hazardBranch: bit;
     signal hazardZero: bit;
-    signal ifidFlush: bit;
     signal idexFlush: bit;
+    signal exmemFlush: bit;
 
     -- datapath
     -- IM interface
@@ -230,8 +230,8 @@ begin
     ch: control_hazard port map (
         branch      => hazardBranch,
         zero        => hazardZero,
-        ifidFlush   => ifidFlush,
-        idexFlush   => idexFlush
+        idexFlush   => idexFlush,
+        exmemFlush   => exmemFlush
     );
 
     dh: data_hazard port map(
@@ -291,10 +291,10 @@ begin
         ----- Aciona MUX para passar vetor de 0 nos sinais de controle
         pass_bubble        => pass_bubble,
         ---- Control hazard
-        hazardBranch       => hazardBranch,
-        hazardZero         => hazardZero,
-        ifidFlush          => ifidFlush,
-        idexFlush          => idexFlush,
+        hazardBranch        => hazardBranch,
+        hazardZero          => hazardZero,
+        idexFlush           => idexFlush,
+        exmemFlush          => exmemFlush,
         --- Forwarding
         exmem_regWrite     => exmem_regWrite,
         memwb_regWrite     => memwb_regWrite,
