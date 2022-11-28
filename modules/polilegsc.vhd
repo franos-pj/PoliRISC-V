@@ -280,30 +280,30 @@ begin
         --- Hazard detection unit
         ---- Data hazard
         ----- Identifica load
-        id_ex_memread      => id_ex_memread,
-        id_ex_register_rd  => id_ex_register_rd,
+        id_ex_memread       => id_ex_memread,
+        id_ex_register_rd   => id_ex_register_rd,
         ----- Identifica se usa saida do load
-        if_id_register_rs1 => if_id_register_rs1,
-        if_id_register_rs2 => if_id_register_rs2,
+        if_id_register_rs1  => if_id_register_rs1,
+        if_id_register_rs2  => if_id_register_rs2,
         ----- Desativam os componentes quando ocorre stall
-        pc_write           => pc_write,
-        if_id_write        => if_id_write,
+        pc_write            => pc_write,
+        if_id_write         => if_id_write,
         ----- Aciona MUX para passar vetor de 0 nos sinais de controle
-        pass_bubble        => pass_bubble,
+        pass_bubble         => pass_bubble,
         ---- Control hazard
         hazardBranch        => hazardBranch,
         hazardZero          => hazardZero,
         idexFlush           => idexFlush,
         exmemFlush          => exmemFlush,
         --- Forwarding
-        exmem_regWrite     => exmem_regWrite,
-        memwb_regWrite     => memwb_regWrite,
-        idex_Rs1           => idex_Rs1,
-        idex_Rs2           => idex_Rs2,
-        exmem_Rd           => exmem_Rd,
-        memwb_Rd           => memwb_Rd,
-        forwardA           => forwardA,
-        forwardB           => forwardB
+        exmem_regWrite      => exmem_regWrite,
+        memwb_regWrite      => memwb_regWrite,
+        idex_Rs1            => idex_Rs1,
+        idex_Rs2            => idex_Rs2,
+        exmem_Rd            => exmem_Rd,
+        memwb_Rd            => memwb_Rd,
+        forwardA            => forwardA,
+        forwardB            => forwardB
     );
 
     dmem_addr <= dmAddr;
