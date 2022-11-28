@@ -32,7 +32,7 @@ architecture arch of signExtend_tb is
     ----     |       | rs2 | rs1 |   |     |      |
     -- --
 
-    type test_case_array is array(0 to 3) of test_case_type;
+    type test_case_array is array(0 to 5) of test_case_type;
 
     constant TEST_CASES: test_case_array := (
         ( -- lw with positive immediate
@@ -46,6 +46,12 @@ architecture arch of signExtend_tb is
             B"0000000000000000000000000000000000000000000000000000_000000000001"),
         ( -- sw with negative immediate
             B"1000000_00000_00000_000_00001_0100011",
+            B"1111111111111111111111111111111111111111111111111111_100000000001"),
+        ( -- beq with positive immediate
+            B"0000000_00000_00000_000_00001_1100011",
+            B"0000000000000000000000000000000000000000000000000000_000000000001"),
+        ( -- beq with negative immediate
+            B"1000000_00000_00000_000_00001_1100011",
             B"1111111111111111111111111111111111111111111111111111_100000000001")
     );
 
