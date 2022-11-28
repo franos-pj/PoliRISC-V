@@ -264,6 +264,8 @@ architecture arch of datapath is
     signal exmemOut: exmem_t;
     signal memwbOut: memwb_t;
 
+    signal pcClock, regfileClock: bit;
+
 begin
 
     pcIn <=
@@ -272,10 +274,11 @@ begin
 
     pcWrite <= pc_write;
 
+    pcClock <= not clock;
     pc: reg
         generic map(WORD_SIZE)
         port map(
-            clock, reset, '1', pcWrite,
+            pcClock, reset, '1', pcWrite,
             pcIn, pcOut
         );
 
@@ -316,10 +319,11 @@ begin
     ifid_funct7_5 <= ifidOut(30);
 
 
+    regfileClock <= not clock;
     registers: regfile
         generic map(NUMBER_OF_REGISTERS, WORD_SIZE)
         port map(
-            clock, reset, memwbOut.regWrite,
+            regfileClock, reset, memwbOut.regWrite,
             rs1, rs2, memwbOut.rd,
             d,
             q1, q2
