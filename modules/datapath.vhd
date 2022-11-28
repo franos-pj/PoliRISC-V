@@ -37,6 +37,7 @@ entity datapath is
         -- Pipeline control signals
         aluOpIn: in bit_vector(1 downto 0);
         aluOpOut: out bit_vector(1 downto 0);
+        exmem_memWrite, exmem_memRead: out bit;
         --- Hazard detection unit
         ---- Data hazard
         ----- Identifica load
@@ -318,7 +319,7 @@ begin
     registers: regfile
         generic map(NUMBER_OF_REGISTERS, WORD_SIZE)
         port map(
-            clock, reset, regWrite,
+            clock, reset, memwbOut.regWrite,
             rs1, rs2, memwbOut.rd,
             d,
             q1, q2
@@ -472,6 +473,8 @@ begin
     dmAddr <= exmemOut.aluResult;
     dmIn <= exmemOut.q2;
     pcSrc <= exmemOut.aluZero and exmemOut.branch;
+    exmem_memRead <= exmemOut.memRead;
+    exmem_memWrite <= exmemOut.memWrite;
 
 
     memwb: memwb_reg port map (
@@ -494,6 +497,6 @@ begin
         memwbOut.rd
     );
 
-    d <= dmOut when memToReg = '1' else dataAluResult;
+    d <= memwbOut.dmOut when memwbOut.memToReg = '1' else memwbOut.aluResult;
 
 end architecture arch;

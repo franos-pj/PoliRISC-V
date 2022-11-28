@@ -104,6 +104,7 @@ architecture arch of polilegsc is
             -- Pipeline control signals
             aluOpIn: in bit_vector(1 downto 0);
             aluOpOut: out bit_vector(1 downto 0);
+            exmem_memWrite, exmem_memRead: out bit;
             --- Hazard detection unit
             ---- Data hazard
             ----- Identifica load
@@ -189,10 +190,9 @@ architecture arch of polilegsc is
     -- Pipeline control signals
     signal aluOpIn: bit_vector(1 downto 0);
     signal aluOpOut: bit_vector(1 downto 0);
+    signal exmem_memWrite, exmem_memRead: bit;
 
 begin
-
-    dmem_we <= memWrite and (not memRead);
 
     cu: controlunit port map(
         opcode   => opcode,
@@ -273,8 +273,10 @@ begin
         dmOut               => dmOut,
 
         -- Pipeline control signals
-        aluOpIn            => aluOpIn,
-        aluOpOut           => aluOpOut,
+        aluOpIn             => aluOpIn,
+        aluOpOut            => aluOpOut,
+        exmem_memWrite      => exmem_memWrite,
+        exmem_memRead       => exmem_memRead,
         --- Hazard detection unit
         ---- Data hazard
         ----- Identifica load
@@ -303,5 +305,12 @@ begin
         forwardA           => forwardA,
         forwardB           => forwardB
     );
+
+    dmem_addr <= dmAddr;
+    dmem_dati <= dmIn;
+    dmOut <= dmem_dato;
+    dmem_we <= exmem_memWrite and (not exmem_memRead);
+    imem_addr <= imAddr;
+    imOut <= imem_data;
 
 end architecture arch;
