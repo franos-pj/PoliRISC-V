@@ -16,7 +16,8 @@ entity idex_reg is
         in_aluOpIn: in bit_vector(1 downto 0);
         in_q1,
         in_q2,
-        in_signExtendOut: in bit_vector(DATA_WORD_SIZE-1 downto 0);
+        in_signExtendOut,
+        in_pc: in bit_vector(DATA_WORD_SIZE-1 downto 0);
         in_rs1,
         in_rs2,
         in_rd: in bit_vector(REGISTER_ADDRESS_WIDTH-1 downto 0);
@@ -32,7 +33,8 @@ entity idex_reg is
         out_aluOpIn: out bit_vector(1 downto 0);
         out_q1,
         out_q2,
-        out_signExtendOut: out bit_vector(DATA_WORD_SIZE-1 downto 0);
+        out_signExtendOut,
+        out_pc: out bit_vector(DATA_WORD_SIZE-1 downto 0);
         out_rs1,
         out_rs2,
         out_rd: out bit_vector(REGISTER_ADDRESS_WIDTH-1 downto 0)
@@ -135,6 +137,13 @@ begin
         port map(
             clock, reset, '1', '1',
             in_signExtendOut, out_signExtendOut
+        );
+
+    pc_reg: reg
+        generic map(DATA_WORD_SIZE)
+        port map(
+            clock, reset, '1', '1',
+            in_pc, out_pc
         );
 
     rs1_reg: reg

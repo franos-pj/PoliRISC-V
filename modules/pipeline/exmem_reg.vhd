@@ -12,7 +12,9 @@ entity exmem_reg is
         in_memWrite,
         in_aluZero: in bit;
         in_result,
-        in_q2: in bit_vector(DATA_WORD_SIZE-1 downto 0);
+        in_q2,
+        in_immExtended,
+        in_pc: in bit_vector(DATA_WORD_SIZE-1 downto 0);
         in_rd: in bit_vector(REGISTER_ADDRESS_WIDTH-1 downto 0);
         -- Output
         out_memToReg,
@@ -22,7 +24,9 @@ entity exmem_reg is
         out_memWrite,
         out_aluZero: out bit;
         out_result,
-        out_q2: out bit_vector(DATA_WORD_SIZE-1 downto 0);
+        out_q2,
+        out_immExtended,
+        out_pc: out bit_vector(DATA_WORD_SIZE-1 downto 0);
         out_rd: out bit_vector(REGISTER_ADDRESS_WIDTH-1 downto 0)
     );
 end entity;
@@ -96,6 +100,20 @@ begin
         port map(
             clock, reset, '1', '1',
             in_q2, out_q2
+        );
+
+    immExtended_reg: reg
+        generic map(DATA_WORD_SIZE)
+        port map(
+            clock, reset, '1', '1',
+            in_immExtended, out_immExtended
+        );
+
+    pc_reg: reg
+        generic map(DATA_WORD_SIZE)
+        port map(
+            clock, reset, '1', '1',
+            in_pc, out_pc
         );
 
     rd_reg: reg

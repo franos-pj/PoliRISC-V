@@ -8,7 +8,10 @@ package pipeline is
     constant EX_CONTROL_WIDTH: natural := 7;
 
 
-    subtype ifid_t is bit_vector(INSTRUCTION_WORD_SIZE-1 downto 0);
+    type ifid_t is record
+        instruction: bit_vector(INSTRUCTION_WORD_SIZE-1 downto 0);
+        pc: bit_vector(DATA_WORD_SIZE-1 downto 0);
+    end record;
     type idex_t is record
         -- WB --
         memToReg,
@@ -27,7 +30,8 @@ package pipeline is
         ----
         q1,
         q2,
-        immExtended: bit_vector(DATA_WORD_SIZE-1 downto 0);
+        immExtended,
+        pc: bit_vector(DATA_WORD_SIZE-1 downto 0);
         rs1, rs2, rd: bit_vector(REGISTER_ADDRESS_WIDTH-1 downto 0);
     end record;
     type exmem_t is record
@@ -42,7 +46,9 @@ package pipeline is
         ----
         aluZero: bit;
         aluResult,
-        q2: bit_vector(DATA_WORD_SIZE-1 downto 0);
+        q2,
+        immExtended,
+        pc: bit_vector(DATA_WORD_SIZE-1 downto 0);
         rd: bit_vector(REGISTER_ADDRESS_WIDTH-1 downto 0);
     end record;
     type memwb_t is record

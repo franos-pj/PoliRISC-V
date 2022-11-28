@@ -146,13 +146,14 @@ architecture arch of datapath is
 
 
     component ifid_reg is
-        generic(
-            wordSize: natural := 64
-        );
         port(
             clock, reset: in bit;
-            dataIn: in bit_vector(wordSize-1 downto 0);
-            dataOut: out bit_vector(wordSize-1 downto 0)
+            -- Input
+            in_instruction: in bit_vector(INSTRUCTION_WORD_SIZE-1 downto 0);
+            in_pc: in bit_vector(DATA_WORD_SIZE-1 downto 0);
+            -- Output
+            out_instruction: out bit_vector(INSTRUCTION_WORD_SIZE-1 downto 0);
+            out_pc: out bit_vector(DATA_WORD_SIZE-1 downto 0)
         );
     end component;
 
@@ -171,7 +172,8 @@ architecture arch of datapath is
             in_aluOpIn: in bit_vector(1 downto 0);
             in_q1,
             in_q2,
-            in_signExtendOut: in bit_vector(DATA_WORD_SIZE-1 downto 0);
+            in_signExtendOut,
+            in_pc: in bit_vector(DATA_WORD_SIZE-1 downto 0);
             in_rs1,
             in_rs2,
             in_rd: in bit_vector(REGISTER_ADDRESS_WIDTH-1 downto 0);
@@ -187,7 +189,8 @@ architecture arch of datapath is
             out_aluOpIn: out bit_vector(1 downto 0);
             out_q1,
             out_q2,
-            out_signExtendOut: out bit_vector(DATA_WORD_SIZE-1 downto 0);
+            out_signExtendOut,
+            out_pc: out bit_vector(DATA_WORD_SIZE-1 downto 0);
             out_rs1,
             out_rs2,
             out_rd: out bit_vector(REGISTER_ADDRESS_WIDTH-1 downto 0)
@@ -205,7 +208,9 @@ architecture arch of datapath is
             in_memWrite,
             in_aluZero: in bit;
             in_result,
-            in_q2: in bit_vector(DATA_WORD_SIZE-1 downto 0);
+            in_q2,
+            in_immExtended,
+            in_pc: in bit_vector(DATA_WORD_SIZE-1 downto 0);
             in_rd: in bit_vector(REGISTER_ADDRESS_WIDTH-1 downto 0);
             -- Output
             out_memToReg,
@@ -215,7 +220,9 @@ architecture arch of datapath is
             out_memWrite,
             out_aluZero: out bit;
             out_result,
-            out_q2: out bit_vector(DATA_WORD_SIZE-1 downto 0);
+            out_q2,
+            out_immExtended,
+            out_pc: out bit_vector(DATA_WORD_SIZE-1 downto 0);
             out_rd: out bit_vector(REGISTER_ADDRESS_WIDTH-1 downto 0)
         );
     end component;
@@ -304,19 +311,21 @@ begin
 
 
     ifidReg: ifid_reg
-        generic map(INSTRUCTION_SIZE)
         port map(
             clock, reset,
-            ifidIn, ifidOut
+            imOut,
+            pcOut,
+            ifidOut.instruction,
+            ifidOut.pc
         );
 
 
-    opcode <= ifidOut(6 downto 0);
-    rd <= ifidOut(11 downto 7);
-    ifid_funct3 <= ifidOut(14 downto 12);
-    rs1 <= ifidOut(19 downto 15);
-    rs2 <= ifidOut(24 downto 20);
-    ifid_funct7_5 <= ifidOut(30);
+    opcode <= ifidOut.instruction(6 downto 0);
+    rd <= ifidOut.instruction(11 downto 7);
+    ifid_funct3 <= ifidOut.instruction(14 downto 12);
+    rs1 <= ifidOut.instruction(19 downto 15);
+    rs2 <= ifidOut.instruction(24 downto 20);
+    ifid_funct7_5 <= ifidOut.instruction(30);
 
 
     regfileClock <= not clock;
@@ -333,19 +342,19 @@ begin
 
     extend: signExtend
         port map(
-            ifidOut,
+            ifidOut.instruction,
             signExtendOut
         );
 
 
     shift2: Shiftleft2
-        port map(signExtendOut, shiftOut);
+        port map(exmemOut.immExtended, shiftOut);
 
 
     shiftAdder: alu
         generic map(WORD_SIZE)
         port map(
-            pcOut, shiftOut,
+            exmemOut.pc, shiftOut,
             pcPlusShift,
             "0010",
             open, open, open
@@ -377,6 +386,7 @@ begin
         q1,
         q2,
         signExtendOut,
+        ifidOut.pc,
         rs1,
         rs2,
         rd,
@@ -397,6 +407,7 @@ begin
         idexOut.q1,
         idexOut.q2,
         idexOut.immExtended,
+        idexOut.pc,
         idexOut.rs1,
         idexOut.rs2,
         idexOut.rd
@@ -456,6 +467,8 @@ begin
         aluZero,
         dataAluResult,
         idexOut.q2,
+        idexOut.immExtended,
+        idexOut.pc,
         idexOut.rd,
         -- OUTPUT
         -- WB --
@@ -470,6 +483,8 @@ begin
         exmemOut.aluZero,
         exmemOut.aluResult,
         exmemOut.q2,
+        exmemOut.immExtended,
+        exmemOut.pc,
         exmemOut.rd
     );
 
