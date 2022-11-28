@@ -11,7 +11,7 @@ package parameters is
     constant REGISTER_ADDRESS_WIDTH: natural := 5;
 
     constant DAT_BASE_PATH: string := "../software/";
-    constant FOLDER: string := "basic/";
+    constant FOLDER: string := "complete" & "/";
     constant RAM_DAT_FILE: string := DAT_BASE_PATH & FOLDER &
         "ram.dat";
     constant ROM_DAT_FILE: string := DAT_BASE_PATH & FOLDER &
