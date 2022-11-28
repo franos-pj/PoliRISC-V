@@ -40,7 +40,7 @@ architecture toplevel of regfile is
 
     constant BANK_SIZE_IN_BITS: natural := natural(ceil(log2(real(regn))));
     signal registerWriteSelect: bit_vector(regn-1 downto 0);
-    type bankOutType is array(regn-2 downto 0)
+    type bankOutType is array(regn-1 downto 1)
         of bit_vector(wordSize-1 downto 0);
     signal registerBankOut: bankOutType;
     signal integerR1, integerR2: natural;
@@ -50,7 +50,7 @@ begin
         generic map(BANK_SIZE_IN_BITS)
         port map(wr, registerWriteSelect);
 
-    regBank: for i in regn-2 downto 0 generate
+    regBank: for i in regn-1 downto 1 generate
         Xi: reg
             generic map(
                 wordSize
@@ -65,9 +65,9 @@ begin
     integerR1 <= to_integer(unsigned(rr1));
     integerR2 <= to_integer(unsigned(rr2));
 
-    q1 <= (others => '0') when integerR1 = regn-1 else
+    q1 <= (others => '0') when integerR1 = 0 else
         registerBankOut(integerR1);
-    q2 <= (others => '0') when integerR2 = regn-1 else
+    q2 <= (others => '0') when integerR2 = 0 else
         registerBankOut(integerR2);
 
 end architecture;
